@@ -1,13 +1,12 @@
 # Moosic
 
-Interactive game design document for **Moosic**, a farm-management music game: catch farm animals (cow, pig, sheep, duck), house them in pens, and conduct them as a band. Each pen sings a solo, then all pens join in the full-orchestra tutti.
+Game design one-pager for **Moosic**, a farm-management music game: catch farm animals (cow, pig, sheep, duck), house them in pens, and conduct them as a band. Each pen sings a solo, then all pens join in the full-orchestra tutti.
 
-**Open it in the browser:** https://enricomartina97.github.io/moosic/
+- **Design one-pager:** https://enricomartina97.github.io/moosic/
+- **Playable prototype:** https://enricomartina97.github.io/moosic/prototype.html
 
-The whole document is a single `index.html` (no build step):
-- Playable prototype: meadow (catching), barn (storage), stage (pens + staffs), Web Audio animal voices.
-- Live score: solo quality, affinity, pen fit and orchestra score.
-- Tuning tables: species, rarity, affinity matrix, scoring weights, storage limits.
-- Design notes: pitch, core loop, systems to build, technical notes, open questions.
+Files (single HTML pages, no build step):
+- `index.html` — production one-pager: pillars, core loop, farm unlocks, band roster, concerts and world, audience and UX, plus an interactive band showcase with Web Audio voices.
+- `prototype.html` — the full playable prototype: catching, barn, pens, animal editor, live scoring and tuning tables.
 
-All values are first-pass placeholders for tuning.
+All numbers are first-pass proposals to validate.

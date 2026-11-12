@@ -1,0 +1,1105 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Moosic Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-screen console. The farm and stage fill the left, a tabbed inspector on the right holds data, tuning and the design notes. */
+:root{
+  --paper:#F6F8F3; --card:#FFFFFF; --ink:#2A2119; --muted:#6E675C; --line:#2A21192B;
+  --grass:#4C8A3C; --grass-soft:#E3EEDB; --snout:#E2654F; --brass:#C9961A; --rare:#3F6FB5;
+  --pig:#F8E4E2; --hide:#FFFFFF;
+  --c-cow:#6B4F3A; --c-pig:#D25C72; --c-sheep:#3F6FB5; --c-duck:#B78410;
+  --good:#3E8E41; --warn:#C9831A; --bad:#C2453A;
+  --f-display:"Gaegu","Comic Sans MS","Chalkboard SE",cursive;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#191C17; --card:#22261F; --ink:#ECE6DA; --muted:#A49C8F; --line:#ECE6DA26;
+  --grass:#86C46E; --grass-soft:#2A3725; --snout:#F0806C; --brass:#E6BD4C; --rare:#7FA6E6;
+  --pig:#4A3134; --hide:#2B3027;
+  --c-cow:#D2B496; --c-pig:#F08EA0; --c-sheep:#8FB2EE; --c-duck:#E6BD4C;
+  --good:#7CCB7F; --warn:#E6B24C; --bad:#F07F72; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#191C17; --card:#22261F; --ink:#ECE6DA; --muted:#A49C8F; --line:#ECE6DA26;
+  --grass:#86C46E; --grass-soft:#2A3725; --snout:#F0806C; --brass:#E6BD4C; --rare:#7FA6E6;
+  --pig:#4A3134; --hide:#2B3027;
+  --c-cow:#D2B496; --c-pig:#F08EA0; --c-sheep:#8FB2EE; --c-duck:#E6BD4C;
+  --good:#7CCB7F; --warn:#E6B24C; --bad:#F07F72; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;line-height:1.05;text-wrap:balance;margin:0}
+h3{font-size:22px} h4{font-size:21px}
+p{margin:0}
+.eyebrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--grass);outline-offset:2px}
+.btn{border:2px solid var(--ink);background:var(--card);border-radius:10px 12px 9px 13px;padding:6px 14px;font-weight:700;cursor:pointer;transition:transform .12s}
+.btn:hover{transform:translateY(-1px) rotate(-.4deg)}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.btn.sm{padding:3px 9px;font-size:13px}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+select{background:var(--card);border:1.5px solid var(--line);border-radius:8px;padding:2px 5px}
+.small{font-size:12.5px;color:var(--muted)}
+
+/* ---------- shell ---------- */
+.shell{display:flex;flex-direction:column;gap:10px;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));padding-block:10px 12px}
+.topbar{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:12px;min-width:0}
+.brand h1{font-size:44px;letter-spacing:.02em}
+.brand h1 .oo{color:var(--snout)}
+.brand .tag{font-family:var(--f-display);font-size:20px;color:var(--muted)}
+.transport{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.transport label{font-size:13px;display:flex;align-items:center;gap:6px}
+.transport input[type=range]{width:96px}
+.playbtn{font-size:18px;padding:6px 20px;min-width:118px}
+.scorechip{display:flex;align-items:center;gap:8px;border:2px solid var(--ink);border-radius:12px 9px 13px 10px;padding:3px 12px 3px 8px;background:var(--card);cursor:pointer}
+.scorechip b{font-family:var(--f-mono);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+.scorechip .grade{width:32px;height:32px;font-size:26px;border-width:2px}
+.scorechip.reveal{animation:pop .6s}
+
+.app{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,410px);gap:12px}
+.play{display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px;min-width:0;min-height:0}
+.farmrow{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;min-height:0}
+.panel{background:var(--card);border:2px solid var(--ink);border-radius:16px 12px 18px 13px;padding:10px 12px;min-width:0;min-height:0;display:flex;flex-direction:column}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:6px 10px;flex-wrap:wrap;margin-bottom:8px}
+
+/* one screen on desktop */
+@media (min-width:1000px) and (min-height:600px){
+  html,body{height:100%}
+  body{overflow:hidden}
+  .shell{height:100%}
+  .app{flex:1;min-height:0}
+  .farmrow{height:clamp(140px,22vh,205px)}
+  .stage{overflow:auto}
+  .side{overflow:hidden}
+}
+
+/* meadow */
+.field{position:relative;flex:1;min-height:140px;border-radius:12px;overflow:hidden;background:
+  radial-gradient(circle at 20% 30%,var(--grass-soft) 0 30%,transparent 31%),
+  radial-gradient(circle at 80% 70%,var(--grass-soft) 0 26%,transparent 27%),
+  linear-gradient(var(--grass-soft),var(--grass-soft)) bottom/100% 36% no-repeat;border:1.5px dashed var(--line)}
+.fence{position:absolute;left:0;right:0;bottom:6px;height:20px;background:repeating-linear-gradient(90deg,var(--line) 0 3px,transparent 3px 40px),linear-gradient(var(--line),var(--line)) 0 6px/100% 2px no-repeat;pointer-events:none}
+.fa{position:absolute;left:0;top:0;width:76px;padding:0;border:0;background:none;cursor:pointer;will-change:transform}
+.fa svg{width:76px;height:auto;display:block;transition:transform .2s}
+.fa.flip svg{transform:scaleX(-1)}
+.fa .rb{position:absolute;top:-4px;right:2px;font-family:var(--f-mono);font-size:9.5px;padding:0 4px;border-radius:6px;background:var(--card);border:1.5px solid currentColor}
+.fa.try svg{animation:wiggle .45s ease-in-out}
+.fa.try::after{content:"";position:absolute;left:50%;top:44%;width:88px;height:54px;translate:-50% -50%;border:3px dashed var(--brass);border-radius:50%;animation:lasso .45s ease-out}
+.fa.gone{opacity:0;transition:opacity .4s}
+@keyframes wiggle{0%,100%{rotate:0}25%{rotate:-8deg}75%{rotate:8deg}}
+@keyframes lasso{from{scale:1.8;opacity:0}to{scale:1;opacity:1}}
+
+.r-common{color:var(--muted)} .r-uncommon{color:var(--grass)} .r-rare{color:var(--rare)} .r-legendary{color:var(--brass)}
+
+/* barn */
+.barn{flex:1;display:flex;flex-wrap:wrap;gap:4px;padding:6px;border-radius:12px;border:1.5px dashed var(--line);align-content:flex-start;overflow:auto;min-height:100px}
+.barn.over,.pen.over{background:var(--grass-soft)}
+.barn .empty{color:var(--muted);font-size:13px;padding:6px}
+.cap{font-family:var(--f-mono);font-size:12px}
+.cap.full{color:var(--bad)}
+
+.tok{position:relative;width:76px;padding:3px 2px 4px;border:2px solid transparent;border-radius:12px;background:none;cursor:grab;display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.tok svg{width:60px;height:auto}
+.tok .tok-n{font-weight:700;font-size:12.5px;color:var(--ink);max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tok .tok-r{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.04em}
+.tok:hover{border-color:var(--line)}
+.tok.sel{border-color:var(--ink);background:var(--paper)}
+.tok.r-legendary svg,.card-art.r-legendary svg{filter:drop-shadow(0 0 6px var(--brass))}
+.tok.sing svg{animation:sing .28s ease-out}
+@keyframes sing{0%{transform:translateY(0) scale(1)}40%{transform:translateY(-8px) scale(1.08,1.12)}100%{transform:translateY(0) scale(1)}}
+@keyframes pop{30%{transform:scale(1.06)}}
+
+/* stage */
+.legend{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.pens{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:14px;flex:1;min-height:0}
+.pencol{min-width:0;display:flex;flex-direction:column}
+.staff{display:block;width:100%;height:auto;max-height:110px}
+.staff .sl{stroke:var(--ink);stroke-width:1;opacity:.55}
+.staff .bar{stroke:var(--ink);stroke-width:1;opacity:.35}
+.staff .note.on{transform-box:fill-box;transform-origin:center;transform:scale(1.5)}
+.staff .ph{stroke:var(--snout);stroke-width:2.5}
+.staff .clabel{font-family:var(--f-mono);font-size:9px;fill:var(--muted)}
+.pen{position:relative;flex:1;border:2.5px solid var(--ink);border-radius:6px 14px 8px 18px;padding:8px 10px 10px;background:var(--paper);display:flex;flex-direction:column;gap:7px;transition:box-shadow .2s, background .2s;margin-top:12px}
+.pen::before,.pen::after{content:"";position:absolute;top:-14px;width:2px;height:12px;background:var(--ink);opacity:.7}
+.pen::before{left:22%} .pen::after{right:22%}
+.pen.live{box-shadow:0 0 0 4px var(--snout)}
+.pen-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pen-sc{font-family:var(--f-mono);font-weight:500;font-size:18px}
+.pen-sc small{font-size:10.5px;color:var(--muted)}
+.pen-ctl{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12.5px}
+.pen-ctl label{display:flex;align-items:center;gap:4px}
+.pen-ctl select{font-size:12.5px;max-width:140px}
+.slots{display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start;flex:1}
+.slot{width:76px;height:88px;border:2px dashed var(--line);border-radius:12px;background:none;color:var(--muted);font-size:24px;cursor:pointer}
+.slot:hover{border-color:var(--grass);color:var(--grass)}
+.meter{height:7px;border-radius:5px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--grass);border-radius:5px;transition:width .3s}
+.hint{font-size:12.5px;color:var(--muted);margin-top:8px}
+.orc{border:2px dashed var(--line);border-radius:12px;padding:5px 10px 2px;margin-bottom:4px;transition:box-shadow .2s}
+.orc.live{box-shadow:0 0 0 4px var(--snout);border-color:transparent}
+.orc-h{display:flex;align-items:center;gap:4px 12px;flex-wrap:wrap}
+.orc-h b{font-family:var(--f-display);font-size:20px}
+.orc-sc{font-family:var(--f-mono);font-size:15px;margin-left:auto}
+.orc-sc small{font-size:10.5px;color:var(--muted)}
+.orc .staff{max-height:80px}
+.listen{padding:0 8px;font-size:12px;margin-left:6px}
+.pen-h h4{display:flex;align-items:center}
+.subh{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.concert-line{font-size:13px;border-top:1.5px solid var(--line);padding-top:8px}
+.concert-line b{font-family:var(--f-mono)}
+
+/* side inspector */
+.side{padding:0}
+.tabs{display:flex;border-bottom:2px solid var(--ink)}
+.tabs button{flex:1;border:0;background:none;padding:9px 4px 7px;font-family:var(--f-display);font-weight:700;font-size:19px;cursor:pointer;color:var(--muted);border-bottom:4px solid transparent;margin-bottom:-2px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--snout)}
+.tabbody{flex:1;min-height:0;overflow:auto;padding:12px 14px 16px}
+.tab{display:grid;gap:14px;align-content:start}
+.sec{display:grid;gap:8px}
+.sec h3{font-size:22px}
+
+/* card */
+.card-empty{color:var(--muted);padding:12px 0}
+.card-top{display:flex;gap:12px;align-items:center}
+.card-art{flex:0 0 96px;border-radius:14px;background:var(--paper);border:1.5px solid var(--line);padding:5px}
+.card-art svg{width:100%;height:auto;display:block}
+.card-art.bounce svg{animation:sing .3s}
+.card-id{min-width:0;flex:1;display:grid;gap:3px}
+.c-name{font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1;border:0;border-bottom:2px dashed var(--line);background:none;width:100%;padding:0}
+.c-sub{font-size:12.5px;color:var(--muted)}
+.mini{font-size:12.5px;display:flex;gap:6px;align-items:center}
+fieldset{border:1.5px solid var(--line);border-radius:12px;padding:6px 10px 8px;margin:0;min-width:0}
+legend{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+.sl{display:grid;grid-template-columns:70px minmax(0,1fr) 30px;align-items:center;gap:8px;font-size:13px}
+.sl input{width:100%;accent-color:var(--grass)}
+.sl output{font-family:var(--f-mono);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums}
+.c-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.traits{display:flex;flex-wrap:wrap;gap:5px}
+.trait{border:1.5px solid var(--line);background:none;border-radius:20px;padding:1px 9px;font-size:12.5px;cursor:pointer}
+.trait.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.trait-desc{font-size:12.5px;color:var(--muted);margin-top:5px}
+.c-q{display:flex;align-items:baseline;gap:8px;font-size:13px;flex-wrap:wrap}
+.c-q b{font-family:var(--f-mono);font-size:19px}
+.c-actions{display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:13px}
+.c-actions .lbl{color:var(--muted);margin-left:4px}
+
+/* score */
+.sc-head{display:flex;align-items:center;gap:14px}
+.sc-big{font-family:var(--f-mono);font-size:48px;font-weight:500;line-height:1;font-variant-numeric:tabular-nums}
+.sc-big small{font-size:14px;color:var(--muted)}
+.grade{font-family:var(--f-display);font-weight:700;font-size:38px;line-height:1;width:50px;height:50px;flex:0 0 auto;display:grid;place-items:center;border:3px solid currentColor;border-radius:50% 46% 52% 48%}
+.g-S{color:var(--brass)} .g-A{color:var(--good)} .g-B{color:var(--rare)} .g-C{color:var(--warn)} .g-D{color:var(--bad)}
+.sc-msg{font-family:var(--f-display);font-size:19px;line-height:1.1}
+.meters{display:grid;gap:7px}
+.mrow{display:grid;grid-template-columns:118px minmax(0,1fr) 30px;gap:8px;align-items:center;font-size:13px}
+.mrow>span:last-child{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.mrow .w{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:4px 5px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-family:var(--f-mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.n{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.notes{list-style:none;padding:0;margin:0;display:grid;gap:5px;font-size:13px}
+.notes li{padding-left:18px;position:relative}
+.notes li::before{position:absolute;left:0;font-weight:700}
+.notes .good::before{content:"+";color:var(--good)} .notes .bad::before{content:"−";color:var(--bad)} .notes .tip::before{content:"→";color:var(--muted)}
+
+/* tuning */
+.tab input[type=number]{width:52px;border:1.5px solid var(--line);border-radius:6px;background:var(--paper);padding:1px 3px;font-family:var(--f-mono);font-size:12px;text-align:right}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:4px;border:1.5px solid var(--line);background:none;border-radius:20px;padding:1px 10px 1px 4px;font-size:13px;cursor:pointer}
+.chip svg{width:30px;height:auto}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--paper);font-weight:700}
+.aff td{padding:3px}
+.aff select{width:56px;font-family:var(--f-mono);text-align:center;border-width:2px;font-size:12.5px}
+.aff select.v2{border-color:var(--good);background:var(--grass-soft)} .aff select.v1{border-color:var(--good)}
+.aff select.v-1{border-color:var(--warn)} .aff select.v-2{border-color:var(--bad)}
+.cfg{display:grid;gap:8px}
+.cfg .sl{grid-template-columns:130px minmax(0,1fr) 30px}
+.formula{font-family:var(--f-mono);font-size:11.5px;line-height:1.65;background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;overflow-x:auto;white-space:pre;margin:0}
+.deflist{display:grid;gap:6px;margin:0}
+.deflist div{display:grid;grid-template-columns:100px minmax(0,1fr);gap:8px;font-size:13px}
+.deflist dt{font-weight:700}
+.deflist dd{margin:0;color:var(--muted)}
+hr.sep{border:0;border-top:1.5px solid var(--line);margin:2px 0;width:100%}
+
+/* design doc tab */
+.pitch{margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1.5px solid var(--line);border-radius:10px;overflow:hidden;margin:0}
+.facts div{background:var(--card);padding:7px 10px}
+.facts dt{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.facts dd{margin:1px 0 0;font-weight:700;font-size:13px}
+.loop{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:s}
+.loop li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;font-size:13px}
+.loop li::before{counter-increment:s;content:counter(s);font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1;color:var(--grass)}
+.loop b{font-family:var(--f-display);font-size:19px;margin-right:4px}
+.sys{display:grid;gap:6px}
+.sys details{border:1.5px solid var(--line);border-radius:10px;padding:6px 10px}
+.sys summary{cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:19px}
+.sys summary span{font-family:var(--f-mono);font-weight:400;font-size:10.5px;color:var(--muted);margin-left:6px;letter-spacing:.04em}
+.sys ul{margin:6px 0 2px;padding:0;list-style:none;display:grid;gap:7px}
+.sys li{font-size:13px}
+.sys li b{display:block}
+.sys li span{color:var(--muted)}
+.sys li em{font-style:normal;font-family:var(--f-mono);font-size:10.5px;color:var(--grass)}
+.open{margin:0;padding-left:20px;display:grid;gap:5px;font-size:13px}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));translate:-50% 0;background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:12px;font-size:14px;max-width:min(520px,calc(100% - 32px));opacity:0;pointer-events:none;transition:opacity .2s, translate .2s;z-index:20}
+.toast.show{opacity:1;translate:-50% -6px}
+
+.ani :where(path,ellipse,circle,rect){fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ani .fill{fill:var(--hide)}
+.ani .pigb{fill:var(--pig)}
+.ani .snout{fill:var(--snout)}
+.ani .beak{fill:var(--brass)}
+.ani .dot{fill:var(--ink);stroke:none}
+.ani .spot{fill:var(--ink);stroke:none;opacity:.85}
+.ani .face{fill:var(--ink)}
+.ani .eye{fill:var(--hide);stroke:none}
+.ani .wo circle{fill:var(--hide);stroke-width:3.4}
+.ani .wf circle{fill:var(--hide);stroke:none}
+
+@media (max-width:999px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .farmrow{height:auto}
+  .field{height:200px;flex:none}
+  .barn{min-height:120px}
+  .tabbody{max-height:none}
+  .transport{margin-left:0}
+}
+@media (max-width:720px){ .pens{grid-template-columns:minmax(0,1fr)} .farmrow{grid-template-columns:minmax(0,1fr)} .brand .tag{display:none} }
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand"><h1>M<span class="oo">oo</span>sic</h1><p class="tag">You are a farmer… and an orchestra conductor.</p></div>
+    <div class="transport">
+      <button class="btn primary playbtn" id="play" data-act="play" title="Every pen sings its solo, left to right, then the whole orchestra sings together">▶ Concert</button>
+      <label for="cfg-tempo-q">Tempo <input type="range" id="cfg-tempo-q" min="60" max="160" value="100" data-cfg="tempo"><output id="tempo-out">100</output> bpm</label>
+      <label for="cfg-stomp-q"><input type="checkbox" id="cfg-stomp-q" data-cfg="stomp" checked> Hoof stomp</label>
+      <button class="scorechip" id="scorechip" data-act="tab" data-tab="score" aria-label="Open score breakdown"></button>
+      <button class="btn sm" data-act="reset" id="reset">Reset</button>
+    </div>
+  </header>
+
+  <main class="app">
+    <div class="play">
+      <div class="farmrow">
+        <div class="panel">
+          <div class="panel-h"><h3>The meadow</h3>
+            <span class="small">Tap an animal to throw the lasso · <button class="btn sm" data-act="whistle" id="whistle">Whistle for new ones</button></span></div>
+          <div class="field" id="field" aria-label="Meadow with wandering animals"><div class="fence"></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h3>The barn</h3><span class="cap" id="barn-cap"></span></div>
+          <div class="barn" id="barn" data-drop="barn"></div>
+        </div>
+      </div>
+
+      <div class="panel stage">
+        <div class="panel-h">
+          <h3>The stage</h3>
+          <div class="legend"><span>Solos left to right, then the tutti.</span>
+            <span style="color:var(--c-cow)">● cow</span><span style="color:var(--c-pig)">● pig</span><span style="color:var(--c-sheep)">● sheep</span><span style="color:var(--c-duck)">● duck</span><span>○ held note</span></div>
+        </div>
+        <div class="orc" id="orc">
+          <div class="orc-h"><b>Tutti · full orchestra</b>
+            <span class="small">After the solos, every pen sings at once over C – Am – F – G and a final C chord.</span>
+            <button class="btn sm" data-act="tutti" id="tutti-btn">▶ Orchestra only</button>
+            <span class="orc-sc" id="orc-sc"></span></div>
+          <div id="orc-staff"></div>
+        </div>
+        <div class="pens" id="pens"></div>
+        <p class="hint">Use ▶ next to a pen to hear it alone. Select an animal, then tap an empty spot, or drag it between barn and pens. Change a pen's style or acoustics and watch its staff, the orchestra and the score change.</p>
+      </div>
+    </div>
+
+    <aside class="panel side" aria-label="Inspector">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="t-animal" data-act="tab" data-tab="animal" aria-controls="tab-animal">Animal</button>
+        <button role="tab" id="t-score" data-act="tab" data-tab="score" aria-controls="tab-score">Score</button>
+        <button role="tab" id="t-tuning" data-act="tab" data-tab="tuning" aria-controls="tab-tuning">Tuning</button>
+        <button role="tab" id="t-design" data-act="tab" data-tab="design" aria-controls="tab-design">Design doc</button>
+      </div>
+      <div class="tabbody" id="tabbody">
+        <div class="tab" role="tabpanel" id="tab-animal" aria-labelledby="t-animal"><div id="card" class="tab"></div></div>
+        <div class="tab" role="tabpanel" id="tab-score" aria-labelledby="t-score" hidden><div id="score" class="tab"></div></div>
+        <div class="tab" role="tabpanel" id="tab-tuning" aria-labelledby="t-tuning" hidden><div id="tune" class="tab"></div></div>
+        <div class="tab" role="tabpanel" id="tab-design" aria-labelledby="t-design" hidden>
+          <div class="sec">
+            <p class="eyebrow">Game design document · v0.1 concept</p>
+            <ul class="pitch">
+              <li>Catch new farm animals and bring them to your music-minded farm. They will be your band.</li>
+              <li>Every animal has its own voice, stats and musical talents. Listen to them and find the best line-up.</li>
+              <li>Put them in pens, press Play, and conduct the best Moosic in the world.</li>
+            </ul>
+            <dl class="facts">
+              <div><dt>Genre</dt><dd>Farm management + sequencer</dd></div>
+              <div><dt>Audience</dt><dd>Ages 10–12 who play in a band</dd></div>
+              <div><dt>Core verbs</dt><dd>Catch, arrange, listen</dd></div>
+              <div><dt>Cast</dt><dd>Cow, pig, sheep, duck</dd></div>
+            </dl>
+          </div>
+          <hr class="sep">
+          <div class="sec"><h3>Core loop</h3>
+            <ol class="loop">
+              <li><p><b>Catch</b>Animals wander the meadow. Rarer ones are harder to lasso but sing better.</p></li>
+              <li><p><b>House</b>Each animal goes into a pen with a style, a capacity and acoustics.</p></li>
+              <li><p><b>Conduct</b>Press Concert. Each pen sings a solo, left to right in storage order, then all pens join in the tutti as one orchestra.</p></li>
+              <li><p><b>Score</b>Solo quality, affinity and pen fit, plus how well the orchestra works as a whole, become a grade. Rearrange and go back to step 1.</p></li>
+            </ol>
+          </div>
+          <hr class="sep">
+          <div class="sec"><h3>Systems to build</h3>
+            <p class="small">From the feature map. Green tags say what stands in for each system in the prototype.</p>
+            <div class="sys">
+              <details open><summary>Animal editor <span>feeds rarity, catching</span></summary><ul>
+                <li><b>Audio tracks system</b><span>Each species has a voice: a synthesized call with its own envelope, filter and range.</span> <em>Web Audio voices</em></li>
+                <li><b>Rarity</b><span>Common to Legendary. Sets spawn odds, catch chance, stat multiplier and trait count.</span> <em>Tuning › Rarity</em></li>
+                <li><b>Audio parameters and statistics</b><span>Pitch, power, timing and harmony change how the animal actually sounds.</span> <em>Animal › sliders</em></li>
+                <li><b>Animal statistics</b><span>Technique affinity and traits drive the score.</span> <em>Animal + Tuning › Species</em></li></ul></details>
+              <details><summary>Catching system <span>feeds storage</span></summary><ul>
+                <li><b>Spawning</b><span>Animals appear in the meadow, weighted by rarity.</span> <em>meadow</em></li>
+                <li><b>Catch roll</b><span>One lasso throw per animal. A miss means it runs away.</span> <em>tap to lasso</em></li>
+                <li><b>To build</b><span>A skill element for the throw, such as timing a shrinking ring to the beat.</span></li></ul></details>
+              <details><summary>Animal storage <span>feeds singing</span></summary><ul>
+                <li><b>Amount per storage box</b><span>Each pen holds a fixed number of animals.</span> <em>Tuning › Animals per pen</em></li>
+                <li><b>Limitation of animals</b><span>The barn holds a limited number of animals waiting for a pen.</span> <em>Tuning › Barn capacity</em></li>
+                <li><b>Audio statistics improved per animal</b><span>A fuller pen sounds bigger, and better acoustics multiply the pen score.</span> <em>fullness + acoustics</em></li></ul></details>
+              <details><summary>Singing animals <span>output: the concert</span></summary><ul>
+                <li><b>Audio reproducer and sequencer</b><span>Turns each pen into two bars of music from its style and one chord of the progression.</span> <em>staff + Play</em></li>
+                <li><b>Animals sing in order of storage</b><span>Pens play left to right. Inside a pen, the first animal leads the melody.</span> <em>playback order</em></li>
+                <li><b>Orchestra (tutti)</b><span>The finale. All pens play their style at the same time over a shared progression, ending on one big chord. Any pen can also be heard alone.</span> <em>tutti strip + ▶ per pen</em></li>
+                <li><b>Scoring</b><span>Pen solos plus the orchestra score: register coverage, style variety and harmony between pens.</span> <em>Score tab</em></li></ul></details>
+            </div>
+          </div>
+          <hr class="sep">
+          <div class="sec"><h3>Technical notes</h3>
+            <dl class="deflist">
+              <div><dt>Music</dt><dd>Solos: progression C – Am – F – G – C, one chord per pen, two 4/4 bars per pen. Melody uses the C major pentatonic, so the band always stays in key.</dd></div>
+              <div><dt>Tutti</dt><dd>Five bars with every pen at once: C – Am – F – G, then a held C chord. Each pen keeps its style, so Drone pens hold the floor, Rhythm pens keep time, Melody pens carry the tune and Chorus pens fill the chords. Volume per pen is scaled by 1/√pens.</dd></div>
+              <div><dt>Voices</dt><dd>Cow: two detuned saws, opening low-pass "moo" and vibrato. Pig: square with pitch drop plus noise snort. Sheep: saw with 8.5 Hz tremolo "baa". Duck: saw through a narrow band-pass, very short.</dd></div>
+              <div><dt>Stats → sound</dt><dd>Low pitch detunes each note up to ±50 cents. Low timing shifts notes up to ±70 ms. Power sets volume. Acoustics add reverb.</dd></div>
+              <div><dt>Ranges</dt><dd>Cow C2–E3, pig A2–C4, sheep G3–A4, duck E4–G5.</dd></div>
+            </dl>
+          </div>
+          <hr class="sep">
+          <div class="sec"><h3>Open questions</h3>
+            <ol class="open">
+              <li>Progression: do concert scores unlock more pens, better acoustics and new species?</li>
+              <li>Catching skill: should the lasso be a rhythm minigame that teaches timing before the concert?</li>
+              <li>Song structure: fixed progression per concert, or songs picked from a songbook?</li>
+              <li>Voices: real animal recordings pitched to notes, or stylized synths like this prototype?</li>
+              <li>Pen order: can the player also reorder pens, or only the animals inside them?</li>
+              <li>Audience: do crowds have tastes that change the scoring weights per concert?</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const R=v=>Math.round(v);
+
+const SPECIES=['cow','pig','sheep','duck'];
+const STATS=['pitch','power','timing','harmony'];
+const STAT_LABEL={pitch:'Pitch',power:'Power',timing:'Timing',harmony:'Harmony'};
+const STAT_DESC={pitch:'How close to the right note. Low pitch sings off-key.',power:'Volume and presence.',timing:'How steady on the beat. Low timing drifts.',harmony:'How well the voice blends.'};
+const TECHS=['Drone','Rhythm','Melody','Chorus'];
+const TECH_DESC={Drone:'Long held notes that make the floor of the song. Pigs and ducks can only repeat short calls.',Rhythm:'Short hits on and off the beat, like a percussion section.',Melody:'The animals pass the tune along, one note each, in pen order.',Chorus:'Everyone sings the chord together on strong beats.'};
+const ACOUSTICS=['Hay bales ×1.00','Wooden barn ×1.08','Concert barn ×1.16'];
+const TRAITS={
+  diva:{name:'Diva',desc:'Affinity is 100 when singing alone. Every pair it is part of gets −1.'},
+  herd:{name:'Herd singer',desc:'+1 pair affinity with its own species.'},
+  shy:{name:'Shy',desc:'Power −30% when its pen is full.'},
+  perfect:{name:'Perfect pitch',desc:'Never sings off-key. Quality +5.'},
+  metronome:{name:'Metronome',desc:'Never drifts off the beat. Fit +10 in Rhythm pens.'},
+  grumpy:{name:'Grumpy',desc:'−1 pair affinity with other species.'}
+};
+const NAMES={cow:['Moozart','Mooriah','Clarabelle','Bovina','Moolissa','Daisy','Big Brass','Buttercup'],
+  pig:['Hamadeus','Porkchopin','Truffle','Oinkatina','Hamlet','Snoutina','Pickles'],
+  sheep:['Baach','Woolfgang','Ewelina','Fleecey','Lambada','Cotton','Shearlock'],
+  duck:['Quackhoven','Puddles','Waddle','Duckelington','Featherine','Pip','Splash']};
+
+const DEFAULTS={
+  species:{
+    cow:{name:'Cow',voice:'Bass',range:[36,52],call:'Mooo',stats:{pitch:55,power:85,timing:40,harmony:65},tech:{Drone:90,Rhythm:35,Melody:30,Chorus:60}},
+    pig:{name:'Pig',voice:'Baritone',range:[45,60],call:'Oink',stats:{pitch:45,power:60,timing:80,harmony:45},tech:{Drone:25,Rhythm:90,Melody:45,Chorus:40}},
+    sheep:{name:'Sheep',voice:'Alto',range:[55,69],call:'Baa',stats:{pitch:65,power:40,timing:50,harmony:85},tech:{Drone:50,Rhythm:30,Melody:55,Chorus:90}},
+    duck:{name:'Duck',voice:'Soprano',range:[64,79],call:'Quack',stats:{pitch:70,power:50,timing:70,harmony:35},tech:{Drone:15,Rhythm:60,Melody:90,Chorus:35}}
+  },
+  rarity:[
+    {id:'common',name:'Common',spawn:55,catch:85,mult:1.0,traits:0},
+    {id:'uncommon',name:'Uncommon',spawn:28,catch:65,mult:1.12,traits:1},
+    {id:'rare',name:'Rare',spawn:13,catch:40,mult:1.25,traits:1},
+    {id:'legendary',name:'Legendary',spawn:4,catch:15,mult:1.4,traits:2}
+  ],
+  affinity:{cow:{cow:1,pig:0,sheep:2,duck:-1},pig:{cow:0,pig:2,sheep:-1,duck:1},sheep:{cow:2,pig:-1,sheep:2,duck:-1},duck:{cow:-1,pig:1,sheep:-1,duck:1}},
+  weights:{quality:40,affinity:30,fit:30,orchestra:30},
+  penCap:3,penCount:3,barnCap:8,tempo:100,stomp:true,tab:'animal',tuneSp:'cow'
+};
+
+let S;
+function fresh(){
+  const s=JSON.parse(JSON.stringify(DEFAULTS));
+  const mk=(sp,name,rarity,stats,tech,traits)=>({id:uid(),species:sp,name,rarity,stats,tech,traits});
+  const a=[
+    mk('sheep','Baach','uncommon',{pitch:74,power:46,timing:55,harmony:93},{Drone:52,Rhythm:28,Melody:60,Chorus:92},['diva']),
+    mk('pig','Hamadeus','common',{pitch:48,power:63,timing:84,harmony:44},{Drone:22,Rhythm:91,Melody:47,Chorus:38},['herd']),
+    mk('pig','Truffle','common',{pitch:41,power:58,timing:77,harmony:50},{Drone:30,Rhythm:85,Melody:40,Chorus:44},[]),
+    mk('cow','Moozart','rare',{pitch:70,power:100,timing:52,harmony:80},{Drone:96,Rhythm:40,Melody:58,Chorus:66},['perfect']),
+    mk('cow','Clarabelle','common',{pitch:52,power:88,timing:38,harmony:61},{Drone:88,Rhythm:30,Melody:28,Chorus:63},['shy']),
+    mk('cow','Daisy','common',{pitch:58,power:80,timing:44,harmony:70},{Drone:84,Rhythm:39,Melody:33,Chorus:57},[]),
+    mk('duck','Quackhoven','rare',{pitch:88,power:60,timing:83,harmony:40},{Drone:18,Rhythm:62,Melody:94,Chorus:36},['metronome']),
+    mk('duck','Puddles','common',{pitch:66,power:47,timing:72,harmony:33},{Drone:12,Rhythm:58,Melody:86,Chorus:30},['grumpy'])
+  ];
+  s.animals={}; a.forEach(x=>s.animals[x.id]=x);
+  s.pens=[{style:'Chorus',acoustics:2,animals:[a[0].id]},{style:'Rhythm',acoustics:1,animals:[a[1].id,a[2].id]},{style:'Drone',acoustics:1,animals:[a[3].id,a[4].id,a[5].id]}];
+  s.barn=[a[6].id,a[7].id];
+  s.selected=a[3].id;
+  return s;
+}
+const has=(a,t)=>a.traits.includes(t);
+const rar=id=>S.rarity.find(r=>r.id===id)||S.rarity[0];
+
+/* ---------- art ---------- */
+const WOOL=[[36,38,10],[44,28,11],[57,24,12],[70,27,11],[80,37,10],[74,47,10],[60,49,11],[46,48,10]];
+const woolC=WOOL.map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}"/>`).join('');
+const ART={
+  cow:`<path d="M87 27 Q96 35 92 46"/><path class="fill" d="M32 24 Q60 17 86 23 Q93 38 87 50 L33 51 Q27 38 32 24Z"/><path class="spot" d="M50 24 Q58 30 54 38 Q46 40 44 31Z M70 34 Q78 32 80 40 Q74 46 68 42Z"/><path d="M38 51V66 M46 51V65 M74 50V66 M82 50V65"/><path d="M15 20 Q10 12 14 7 M29 20 Q34 12 30 7"/><path class="fill" d="M10 25 L2 22 L8 31Z"/><ellipse class="fill" cx="22" cy="29" rx="13" ry="12"/><ellipse class="snout" cx="19" cy="38" rx="11" ry="7"/><circle class="dot" cx="15" cy="38" r="1.4"/><circle class="dot" cx="22" cy="38" r="1.4"/><circle class="dot" cx="21" cy="25" r="1.7"/>`,
+  pig:`<path d="M87 36 q8 -4 4 -10 q-5 2 0 6"/><path d="M42 53V66 M50 55V66 M70 55V66 M78 53V66"/><ellipse class="pigb" cx="58" cy="40" rx="30" ry="17"/><path class="pigb" d="M21 27 L25 14 L33 25Z"/><circle class="pigb" cx="28" cy="38" r="14"/><rect class="snout" x="9" y="34" width="13" height="11" rx="4"/><circle class="dot" cx="13" cy="39.5" r="1.3"/><circle class="dot" cx="18" cy="39.5" r="1.3"/><circle class="dot" cx="27" cy="33" r="1.7"/>`,
+  sheep:`<path d="M42 50V66 M50 52V66 M66 52V66 M74 50V66"/><g class="wo">${woolC}</g><g class="wf">${woolC}</g><path class="face" d="M18 29 L8 27 L16 35Z"/><ellipse class="face" cx="24" cy="35" rx="9" ry="12"/><circle class="eye" cx="22" cy="31" r="1.7"/><ellipse class="snout" cx="22" cy="43" rx="6" ry="4"/>`,
+  duck:`<path d="M52 59V67 M62 59V67 M47 67h9 M57 67h9"/><path class="fill" d="M26 42 Q28 61 56 60 Q82 59 90 34 Q78 43 66 40 Q50 34 40 36 Q38 30 40 24 Z"/><path d="M50 47 Q62 42 74 49"/><circle class="fill" cx="32" cy="26" r="11"/><path class="beak" d="M23 24 Q11 22 8 27 Q13 33 23 30Z"/><circle class="dot" cx="32" cy="23" r="1.7"/>`
+};
+const svgA=sp=>`<svg class="ani" viewBox="0 0 100 72" aria-hidden="true">${ART[sp]}</svg>`;
+
+/* ---------- scoring ---------- */
+function quality(a,pen){
+  const s={...a.stats};
+  if(pen && has(a,'shy') && pen.animals.length>=S.penCap) s.power*=.7;
+  let q=s.pitch*.35+s.power*.2+s.timing*.25+s.harmony*.2;
+  if(has(a,'perfect')) q+=5;
+  return clamp(q,0,100);
+}
+function pairValue(a,b){
+  let v=S.affinity[a.species][b.species];
+  if(a.species===b.species){ if(has(a,'herd'))v++; if(has(b,'herd'))v++; }
+  else { if(has(a,'grumpy'))v--; if(has(b,'grumpy'))v--; }
+  if(has(a,'diva'))v--; if(has(b,'diva'))v--;
+  return clamp(v,-3,3);
+}
+function fitOf(a,style){ return clamp(a.tech[style]+(style==='Rhythm'&&has(a,'metronome')?10:0),0,100); }
+function penScore(pen){
+  const list=pen.animals.map(id=>S.animals[id]); const n=list.length;
+  if(!n) return {n:0,q:0,a:0,f:0,ac:1,full:0,total:0,pairs:[],list:[]};
+  const q=mean(list.map(a=>quality(a,pen)));
+  const pairs=[]; let a;
+  if(n===1) a=has(list[0],'diva')?100:60;
+  else { for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)pairs.push({x:list[i],y:list[j],v:pairValue(list[i],list[j])}); a=clamp(50+mean(pairs.map(p=>p.v))*25,0,100); }
+  const f=mean(list.map(x=>fitOf(x,pen.style)));
+  const W=S.weights, ws=(W.quality+W.affinity+W.fit)||1;
+  const base=(W.quality*q+W.affinity*a+W.fit*f)/ws;
+  const ac=1+.08*(pen.acoustics-1), full=.7+.3*n/S.penCap;
+  return {n,q,a,f,ac,full,base,total:clamp(base*ac*full,0,100),pairs,list};
+}
+function orchestraScore(){
+  const filled=S.pens.filter(p=>p.animals.length);
+  const missing=SPECIES.filter(sp=>!filled.some(p=>p.animals.some(id=>S.animals[id].species===sp)));
+  if(!filled.length) return {cov:0,vari:0,cross:0,fill:0,total:0,pairs:[],missing,dupes:[]};
+  const cov=(4-missing.length)/4*100;
+  const styles=filled.map(p=>p.style), dupes=TECHS.filter(t=>styles.filter(x=>x===t).length>1);
+  const vari=new Set(styles).size/Math.min(S.pens.length,4)*100;
+  const pairs=[];
+  for(let i=0;i<S.pens.length;i++)for(let j=i+1;j<S.pens.length;j++)
+    S.pens[i].animals.forEach(x=>S.pens[j].animals.forEach(y=>{ const a=S.animals[x],b=S.animals[y]; pairs.push({x:a,y:b,v:pairValue(a,b),pi:i,pj:j}); }));
+  const cross=pairs.length?clamp(50+mean(pairs.map(p=>p.v))*25,0,100):50;
+  const fill=filled.length/S.pens.length;
+  return {cov,vari,cross,fill,total:clamp(mean([cov,vari,cross])*fill,0,100),pairs,missing,dupes};
+}
+function concertScore(res,orc){
+  const solo=mean(res.map(r=>r.total)), o=clamp(S.weights.orchestra,0,100)/100;
+  return {solo,o,total:solo*(1-o)+orc.total*o};
+}
+function grade(v){
+  if(v>=85) return {l:'S',msg:'Standing ovation. The whole county came to listen.'};
+  if(v>=72) return {l:'A',msg:'Encore! The crowd wants one more song.'};
+  if(v>=58) return {l:'B',msg:'A nice tune. Some toes are tapping.'};
+  if(v>=42) return {l:'C',msg:'Polite clapping from the chickens.'};
+  return {l:'D',msg:'The farmer next door is calling to complain.'};
+}
+
+/* ---------- music ---------- */
+const PROG=[[0,'maj'],[9,'min'],[5,'maj'],[7,'maj'],[0,'maj']];
+const PENTA=[0,2,4,7,9];
+const PHRASES=[[0,1,2,4,3,2,1,0],[2,3,4,3,2,1,2,0],[4,3,2,1,2,3,4,2],[1,2,3,4,3,1,0,0],[0,2,4,2,3,1,0,0]];
+const mod12=x=>((x%12)+12)%12;
+function place(pc,[lo,hi]){ const c=(lo+hi)/2; let best=null; for(let m=lo;m<=hi;m++) if(mod12(m)===mod12(pc) && (best===null||Math.abs(m-c)<Math.abs(best-c))) best=m; return best??R(c); }
+function placeMel(semi,[lo,hi]){ let c0=lo; while(mod12(c0)!==0)c0++; let m=c0+semi; if(m>hi)m-=12; if(m<lo)m+=12; return m; }
+const triad=([root,q])=>[0,q==='maj'?4:3,7].map(x=>root+x);
+function penEvents(p,i,chords,phrase){
+  const ids=p.animals, n=ids.length; if(!n) return [];
+  chords=chords||[PROG[i%PROG.length],PROG[i%PROG.length]]; phrase=phrase||PHRASES[i%PHRASES.length];
+  const T=chords.map(triad);
+  const ev=[]; const add=(id,t,d,midi)=>ev.push({id,t,d,midi,sp:S.animals[id].species});
+  ids.forEach((id,k)=>{
+    const a=S.animals[id], r=S.species[a.species].range, perc=a.species==='pig'||a.species==='duck';
+    if(p.style==='Drone'){
+      [0,4].forEach((bar,j)=>{ const m=place(T[j][(k+j)%3],r); if(perc){ for(let b=0;b<4;b++) add(id,bar+b,.5,m);} else add(id,bar,3.8,m); });
+    } else if(p.style==='Rhythm'){
+      const pat=[[0,1,2,3],[.5,1.5,2.5,3.5],[0,.75,1.5,2.5,3]][k%3];
+      [0,4].forEach((bar,j)=>pat.forEach(b=>add(id,bar+b,.4,place(T[j][(k+j)%3],r))));
+    } else if(p.style==='Chorus'){
+      [0,2,4,6].forEach((b,j)=>{ const bar=j>=2?1:0; add(id,b,1.8,place(T[bar][(k+bar)%3],r)); });
+    }
+  });
+  if(p.style==='Melody'){
+    phrase.forEach((deg,j)=>{ const id=ids[j%n]; add(id,j,.9,placeMel(PENTA[deg],S.species[S.animals[id].species].range)); });
+  }
+  return ev.sort((a,b)=>a.t-b.t);
+}
+/* tutti: every pen at once, 4 bars over C Am F G, then a held C chord */
+const TUTTI_PROG=[[0,'maj'],[9,'min'],[5,'maj'],[7,'maj']], TUTTI_BEATS=20;
+function tuttiEvents(){
+  const out=[];
+  S.pens.forEach((p,pi)=>{
+    if(!p.animals.length) return;
+    penEvents(p,pi,[TUTTI_PROG[0],TUTTI_PROG[1]],PHRASES[pi%PHRASES.length]).forEach(e=>out.push({...e,pi}));
+    penEvents(p,pi,[TUTTI_PROG[2],TUTTI_PROG[3]],PHRASES[(pi+2)%PHRASES.length]).forEach(e=>out.push({...e,t:e.t+8,pi}));
+    p.animals.forEach((id,k)=>{
+      const a=S.animals[id], r=S.species[a.species].range, perc=a.species==='pig'||a.species==='duck', m=place([0,4,7][(k+pi)%3],r);
+      if(perc){ out.push({id,pi,sp:a.species,t:16,d:.5,midi:m}); out.push({id,pi,sp:a.species,t:17,d:.5,midi:m}); }
+      else out.push({id,pi,sp:a.species,t:16,d:3.5,midi:m});
+    });
+  });
+  return out.sort((a,b)=>a.t-b.t);
+}
+function orchestraSVG(){
+  const W=960,H=76,x0=26,x1=948, X=t=>x0+(t/TUTTI_BEATS)*(x1-x0), y=m=>68-(m-36)*(56/43);
+  let s=`<svg class="staff" viewBox="0 0 ${W} ${H}" aria-label="Orchestra score: all pens together">`;
+  for(let k=0;k<5;k++) s+=`<line class="sl" x1="4" x2="${W-4}" y1="${22+k*10}" y2="${22+k*10}"/>`;
+  for(let b=0;b<=TUTTI_BEATS;b+=4) s+=`<line class="bar" x1="${X(b)-6}" x2="${X(b)-6}" y1="22" y2="62"/>`;
+  ['C','Am','F','G','C'].forEach((c,k)=>s+=`<text class="clabel" x="${X(k*4)}" y="12">${c}</text>`);
+  const ev=tuttiEvents();
+  if(!ev.length) s+=`<text class="clabel" x="${W/2}" y="46" text-anchor="middle">Put animals in pens to hear the orchestra.</text>`;
+  ev.forEach((e,k)=>{
+    const cx=X(e.t), cy=y(e.midi), col=`var(--c-${e.sp})`, held=e.d>=1.5;
+    s+=`<g class="note" id="o-${k}"><line x1="${cx+3.4}" x2="${cx+3.4}" y1="${cy}" y2="${cy-13}" stroke="${col}" stroke-width="1.2"/><ellipse cx="${cx}" cy="${cy}" rx="3.7" ry="2.7" transform="rotate(-20 ${cx} ${cy})" fill="${held?'var(--paper)':col}" stroke="${col}" stroke-width="1.4"/></g>`;
+  });
+  s+=`<line class="ph" id="ph-orc" x1="0" x2="0" y1="16" y2="70" visibility="hidden"/></svg>`;
+  return s;
+}
+function renderOrc(){
+  $('#orc-staff').innerHTML=orchestraSVG();
+  $('#orc-sc').innerHTML=`Orchestra ${R(orchestraScore().total)}<small>/100</small>`;
+}
+const NN=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+const noteName=m=>NN[mod12(m)]+(Math.floor(m/12)-1);
+
+function staffSVG(p,i){
+  const W=240,H=88, x0=14, x1=226;
+  const y=m=>80-(m-36)*(62/43);
+  let s=`<svg class="staff" viewBox="0 0 ${W} ${H}" aria-label="Staff for pen ${i+1}">`;
+  for(let k=0;k<5;k++) s+=`<line class="sl" x1="4" x2="${W-4}" y1="${24+k*10}" y2="${24+k*10}"/>`;
+  s+=`<line class="bar" x1="4" x2="4" y1="24" y2="64"/><line class="bar" x1="120" x2="120" y1="24" y2="64"/><line class="bar" x1="${W-4}" x2="${W-4}" y1="24" y2="64"/>`;
+  const [root,q]=PROG[i%PROG.length];
+  s+=`<text class="clabel" x="6" y="11">${NN[root]}${q==='min'?'m':''} · ${p.style}</text>`;
+  penEvents(p,i).forEach((e,k)=>{
+    const cx=x0+(e.t/8)*(x1-x0)+3, cy=y(e.midi), col=`var(--c-${e.sp})`, held=e.d>=1.5;
+    s+=`<g class="note" id="n-${i}-${k}"><line x1="${cx+4}" x2="${cx+4}" y1="${cy}" y2="${cy-17}" stroke="${col}" stroke-width="1.4"/><ellipse cx="${cx}" cy="${cy}" rx="4.4" ry="3.2" transform="rotate(-20 ${cx} ${cy})" fill="${held?'var(--paper)':col}" stroke="${col}" stroke-width="1.6"/></g>`;
+  });
+  s+=`<line class="ph" id="ph-${i}" x1="0" x2="0" y1="18" y2="70" visibility="hidden"/></svg>`;
+  return s;
+}
+
+/* ---------- audio ---------- */
+let AC,master,rev,NOISE;
+function audio(){
+  if(!AC){
+    AC=new (window.AudioContext||window.webkitAudioContext)();
+    const comp=AC.createDynamicsCompressor(); comp.threshold.value=-14; comp.ratio.value=4;
+    master=AC.createGain(); master.gain.value=.8; master.connect(comp); comp.connect(AC.destination);
+    rev=AC.createConvolver(); const len=AC.sampleRate*1.8, b=AC.createBuffer(2,len,AC.sampleRate);
+    for(let c=0;c<2;c++){const d=b.getChannelData(c); for(let k=0;k<len;k++) d[k]=(Math.random()*2-1)*Math.pow(1-k/len,3);}
+    rev.buffer=b; const ro=AC.createGain(); ro.gain.value=.5; rev.connect(ro); ro.connect(comp);
+    NOISE=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate); const nd=NOISE.getChannelData(0); for(let k=0;k<nd.length;k++) nd[k]=Math.random()*2-1;
+  }
+  if(AC.state==='suspended') AC.resume();
+  return AC;
+}
+function osc(type,f,t,end){ const o=AC.createOscillator(); o.type=type; o.frequency.setValueAtTime(f,t); o.start(t); o.stop(end); return o; }
+function filt(type,f,Q){ const b=AC.createBiquadFilter(); b.type=type; b.frequency.value=f; b.Q.value=Q; return b; }
+function noise(t,d){ const s=AC.createBufferSource(); s.buffer=NOISE; s.start(t,Math.random()*1.5,d); return s; }
+function sing(sp,t,midi,dur,vel,cents,wet,dest){
+  const f=440*Math.pow(2,(midi-69)/12+cents/1200);
+  const env=AC.createGain(); env.gain.setValueAtTime(.0001,t);
+  const send=AC.createGain(); send.gain.value=wet; env.connect(dest); env.connect(send); send.connect(rev);
+  if(sp==='cow'){
+    dur=Math.max(dur,.45); const end=t+dur+.12;
+    const lp=filt('lowpass',220,7); lp.frequency.setValueAtTime(220,t); lp.frequency.linearRampToValueAtTime(1100,t+Math.min(.35,dur*.35)); lp.frequency.linearRampToValueAtTime(420,t+dur);
+    const lfo=osc('sine',5.2,t,end), lg=AC.createGain(); lg.gain.setValueAtTime(0,t); lg.gain.linearRampToValueAtTime(f*.015,t+dur*.5); lfo.connect(lg);
+    [1,1.006].forEach(m=>{ const o=osc('sawtooth',f*m*.93,t,end); o.frequency.linearRampToValueAtTime(f*m,t+.14); o.frequency.setValueAtTime(f*m,t+dur*.72); o.frequency.linearRampToValueAtTime(f*m*.86,t+dur); lg.connect(o.frequency); o.connect(lp); });
+    lp.connect(env);
+    env.gain.linearRampToValueAtTime(vel,t+.09); env.gain.setValueAtTime(vel,t+dur*.8); env.gain.linearRampToValueAtTime(.0001,t+dur+.1);
+  } else if(sp==='pig'){
+    dur=clamp(dur,.16,.34); const end=t+dur+.05;
+    const o=osc('square',f*1.3,t,end); o.frequency.exponentialRampToValueAtTime(f*.82,t+dur);
+    const bp=filt('bandpass',700,2.5); bp.frequency.setValueAtTime(700,t); bp.frequency.linearRampToValueAtTime(1500,t+dur*.35); bp.frequency.linearRampToValueAtTime(800,t+dur);
+    o.connect(bp); bp.connect(env);
+    const nz=noise(t,dur*.7), nb=filt('bandpass',1100,1.2), ng=AC.createGain(); ng.gain.value=.5; nz.connect(nb); nb.connect(ng); ng.connect(env);
+    env.gain.linearRampToValueAtTime(vel*1.2,t+.015); env.gain.exponentialRampToValueAtTime(vel*.5,t+dur*.6); env.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  } else if(sp==='sheep'){
+    dur=Math.max(dur,.3); const end=t+dur+.12;
+    const o=osc('sawtooth',f*1.02,t,end); o.frequency.linearRampToValueAtTime(f,t+.08); o.frequency.setValueAtTime(f,t+dur*.75); o.frequency.linearRampToValueAtTime(f*.95,t+dur);
+    const bp=filt('bandpass',1300,1.4), lp=filt('lowpass',2600,.7), body=AC.createGain(); body.gain.value=.35;
+    const trem=AC.createGain(); trem.gain.value=.6; const lfo=osc('sine',8.5,t,end), lg=AC.createGain(); lg.gain.value=.4; lfo.connect(lg); lg.connect(trem.gain);
+    o.connect(bp); bp.connect(trem); o.connect(lp); lp.connect(body); body.connect(trem); trem.connect(env);
+    env.gain.linearRampToValueAtTime(vel*1.3,t+.04); env.gain.setValueAtTime(vel*1.3,t+dur*.8); env.gain.linearRampToValueAtTime(.0001,t+dur+.1);
+  } else {
+    dur=clamp(dur,.14,.26); const end=t+dur+.05;
+    const o=osc('sawtooth',f*1.35,t,end); o.frequency.exponentialRampToValueAtTime(f,t+.05); o.frequency.exponentialRampToValueAtTime(f*.88,t+dur);
+    const bp=filt('bandpass',2200,6); bp.frequency.setValueAtTime(2200,t); bp.frequency.exponentialRampToValueAtTime(1100,t+dur);
+    const bp2=filt('bandpass',900,3);
+    o.connect(bp); o.connect(bp2); bp.connect(env); bp2.connect(env);
+    env.gain.linearRampToValueAtTime(vel*1.8,t+.01); env.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  }
+}
+function stomp(t,g,dest){
+  const o=osc('sine',110,t,t+.25); o.frequency.exponentialRampToValueAtTime(40,t+.12);
+  const e=AC.createGain(); e.gain.setValueAtTime(g,t); e.gain.exponentialRampToValueAtTime(.0001,t+.2); o.connect(e); e.connect(dest);
+}
+function applause(score){
+  const t0=AC.currentTime+.05, count=R(8+score*.9);
+  for(let k=0;k<count;k++){ const t=t0+Math.random()*2.2*Math.random()+Math.random()*.4; const s=noise(t,.05), b=filt('bandpass',rnd(1200,2800),1.5), g=AC.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(rnd(.08,.18),t+.003); g.gain.exponentialRampToValueAtTime(.0001,t+.05); s.connect(b); b.connect(g); g.connect(master); }
+}
+function voiceParams(a,n,full){
+  return {
+    jitter:has(a,'metronome')?0:(Math.random()-.5)*(100-a.stats.timing)/100*.14,
+    cents:has(a,'perfect')?0:(Math.random()-.5)*(100-a.stats.pitch)*1.0,
+    vel:(.1+.22*(a.stats.power*(has(a,'shy')&&full?.7:1))/100)/Math.sqrt(n)
+  };
+}
+
+/* ---------- playback ---------- */
+let perf=null;
+/* mode: {type:'concert'} = solos then tutti · {type:'pen',i} = one pen alone · {type:'tutti'} = orchestra only */
+function play(mode){
+  const key=mode.type+(mode.i??'');
+  if(perf){ const same=perf.key===key; stop(); if(same) return; }
+  const filled=S.pens.map((p,i)=>i).filter(i=>S.pens[i].animals.length);
+  if(mode.type==='pen'&&!S.pens[mode.i].animals.length){ toast(`Pen ${mode.i+1} is empty.`); return; }
+  if(!filled.length){ toast('Put at least one animal in a pen first.'); return; }
+  const segs=[];
+  if(mode.type==='pen') segs.push({kind:'pen',pi:mode.i,beats:8});
+  else { if(mode.type==='concert') filled.forEach(pi=>segs.push({kind:'pen',pi,beats:8})); segs.push({kind:'tutti',beats:TUTTI_BEATS}); }
+  const ac=audio(), beat=60/S.tempo, bus=ac.createGain(); bus.connect(master);
+  const timers=[], at=(t,fn)=>timers.push(setTimeout(fn,Math.max(0,(t-ac.currentTime)*1000)));
+  const sched=(e,start,pen,g,noteId)=>{
+    const n=pen.animals.length, a=S.animals[e.id], v=voiceParams(a,n,n>=S.penCap), t=Math.max(ac.currentTime+.02,start+e.t*beat+v.jitter);
+    sing(e.sp,t,e.midi,e.d*beat,v.vel*g,v.cents,.12+.14*(pen.acoustics-1),bus);
+    at(t,()=>flash(e.pi,e.id,noteId,e.d*beat));
+  };
+  let t=ac.currentTime+.15;
+  segs.forEach(sg=>{
+    sg.start=t; sg.dur=sg.beats*beat;
+    if(sg.kind==='pen'){
+      const p=S.pens[sg.pi];
+      penEvents(p,sg.pi).forEach((e,k)=>sched({...e,pi:sg.pi},sg.start,p,1,`n-${sg.pi}-${k}`));
+      at(sg.start,()=>setLive([sg.pi],false));
+    } else {
+      const g=1/Math.sqrt(filled.length);
+      tuttiEvents().forEach((e,k)=>sched(e,sg.start,S.pens[e.pi],g,`o-${k}`));
+      at(sg.start,()=>setLive(filled,true));
+    }
+    if(S.stomp) for(let b=0;b<Math.min(sg.beats,16);b++) stomp(sg.start+b*beat,b%4===0?.3:.16,bus);
+    t+=sg.dur;
+  });
+  perf={key,mode,bus,timers,segs,raf:0};
+  at(t+.3,()=>finish(mode));
+  const btn=mode.type==='concert'?$('#play'):mode.type==='tutti'?$('#tutti-btn'):$(`[data-act="listen"][data-pen="${mode.i}"]`);
+  if(btn) btn.textContent='■ Stop';
+  const tick=()=>{ if(!perf) return; const now=ac.currentTime;
+    $$('.ph').forEach(l=>l.setAttribute('visibility','hidden'));
+    const sg=perf.segs.find(s=>now>=s.start&&now<s.start+s.dur);
+    if(sg){ const f=(now-sg.start)/sg.dur, l=$(sg.kind==='pen'?'#ph-'+sg.pi:'#ph-orc');
+      if(l){ const x=sg.kind==='pen'?14+f*212:26+f*922; l.setAttribute('x1',x); l.setAttribute('x2',x); l.setAttribute('visibility','visible'); } }
+    perf.raf=requestAnimationFrame(tick); };
+  perf.raf=requestAnimationFrame(tick);
+}
+function setLive(list,tutti){
+  $$('.pen').forEach(el=>el.classList.toggle('live',list.includes(+el.dataset.drop)));
+  $('#orc').classList.toggle('live',tutti);
+}
+function stop(){
+  if(!perf) return; perf.timers.forEach(clearTimeout); cancelAnimationFrame(perf.raf);
+  const bus=perf.bus; bus.gain.setTargetAtTime(0,AC.currentTime,.04); setTimeout(()=>bus.disconnect(),400);
+  perf=null; $('#play').textContent='▶ Concert'; $('#tutti-btn').textContent='▶ Orchestra only';
+  $$('[data-act="listen"]').forEach(b=>b.textContent='▶');
+  setLive([],false); $$('.ph').forEach(l=>l.setAttribute('visibility','hidden'));
+}
+function finish(mode){
+  stop();
+  const orc=orchestraScore();
+  if(mode.type==='concert'){
+    const c=concertScore(S.pens.map(penScore),orc), g=grade(c.total);
+    applause(c.total);
+    const sc=$('#scorechip'); sc.classList.remove('reveal'); void sc.offsetWidth; sc.classList.add('reveal');
+    toast(`Concert over: ${R(c.total)}/100, grade ${g.l}. ${g.msg}`);
+  } else if(mode.type==='tutti') toast(`Orchestra score: ${R(orc.total)}/100.`);
+}
+function flash(pi,id,noteId,dur){
+  const tok=document.querySelector(`.pen[data-drop="${pi}"] .tok[data-id="${id}"]`);
+  if(tok){ tok.classList.remove('sing'); void tok.offsetWidth; tok.classList.add('sing'); }
+  const n=document.getElementById(noteId); if(n){ n.classList.add('on'); setTimeout(()=>n.classList.remove('on'),Math.max(160,Math.min(dur*1000,600))); }
+}
+function audition(a){
+  const ac=audio(), beat=60/S.tempo, r=S.species[a.species].range, t0=ac.currentTime+.08;
+  [0,2,4,2,0].forEach((d,k)=>{ const v=voiceParams(a,1,false); sing(a.species,t0+k*beat*.75+v.jitter*.5,placeMel(PENTA[d],r),beat*(k===4?1.4:.6),v.vel,v.cents,.18,master);
+    setTimeout(()=>{ const art=$('.card-art'); if(art){art.classList.remove('bounce'); void art.offsetWidth; art.classList.add('bounce');} },(k*beat*.75+.08)*1000); });
+}
+
+/* ---------- moves ---------- */
+function locate(id){ if(S.barn.includes(id)) return 'barn'; for(let i=0;i<S.pens.length;i++) if(S.pens[i].animals.includes(id)) return i; return null; }
+function detach(id){ const l=locate(id); if(l==='barn') S.barn=S.barn.filter(x=>x!==id); else if(l!==null) S.pens[l].animals=S.pens[l].animals.filter(x=>x!==id); }
+function moveTo(id,dest){
+  const from=locate(id); if(from===dest) return false;
+  if(dest==='barn'){ if(S.barn.length>=S.barnCap){ toast(`The barn is full (${S.barnCap}/${S.barnCap}). Release an animal or raise barn capacity in Tuning.`); return false; } }
+  else if(S.pens[dest].animals.length>=S.penCap){ toast(`Pen ${dest+1} is full. Move someone out or raise "Animals per pen" in Tuning.`); return false; }
+  detach(id);
+  if(dest==='barn') S.barn.push(id); else S.pens[dest].animals.push(id);
+  if(perf) stop();
+  renderAll(); return true;
+}
+
+/* ---------- tabs ---------- */
+function setTab(t){
+  S.tab=t;
+  ['animal','score','tuning','design'].forEach(k=>{ $('#tab-'+k).hidden=k!==t; $('#t-'+k).setAttribute('aria-selected',k===t); });
+}
+
+/* ---------- render ---------- */
+function token(a){
+  return `<button class="tok r-${a.rarity} ${S.selected===a.id?'sel':''}" draggable="true" data-act="select" data-id="${a.id}" aria-pressed="${S.selected===a.id}" title="${esc(a.name)}, ${rar(a.rarity).name} ${S.species[a.species].name}">${svgA(a.species)}<span class="tok-n">${esc(a.name)}</span><span class="tok-r">${rar(a.rarity).name}</span></button>`;
+}
+function renderBarn(){
+  const cap=$('#barn-cap'); cap.textContent=`${S.barn.length} / ${S.barnCap} spaces`; cap.classList.toggle('full',S.barn.length>=S.barnCap);
+  $('#barn').innerHTML=S.barn.length?S.barn.map(id=>token(S.animals[id])).join(''):`<p class="empty">The barn is empty. Catch animals in the meadow.</p>`;
+}
+function renderPens(){
+  const w=$('#pens'); w.style.setProperty('--n',S.pens.length);
+  w.innerHTML=S.pens.map((p,i)=>{
+    const sc=penScore(p); let slots='';
+    for(let k=0;k<S.penCap;k++){ const id=p.animals[k]; slots+=id?token(S.animals[id]):`<button class="slot" data-act="place" data-pen="${i}" aria-label="Empty spot in pen ${i+1}">+</button>`; }
+    return `<div class="pencol"><div id="staff-${i}">${staffSVG(p,i)}</div>
+      <div class="pen" data-drop="${i}">
+        <div class="pen-h"><h4>Pen ${i+1}<button class="btn sm listen" data-act="listen" data-pen="${i}" aria-label="Listen to pen ${i+1} alone" title="Listen to this pen alone" ${p.animals.length?'':'disabled'}>${perf&&perf.key==='pen'+i?'■ Stop':'▶'}</button></h4><span class="pen-sc" id="pen-sc-${i}">${R(sc.total)}<small>/100</small></span></div>
+        <div class="pen-ctl">
+          <label for="pen-style-${i}" title="${esc(TECH_DESC[p.style])}" id="pen-stl-${i}">Style <select id="pen-style-${i}" data-pen-style="${i}">${TECHS.map(t=>`<option ${t===p.style?'selected':''}>${t}</option>`).join('')}</select></label>
+          <label for="pen-ac-${i}">Acoustics <select id="pen-ac-${i}" data-pen-ac="${i}">${ACOUSTICS.map((a,k)=>`<option value="${k+1}" ${p.acoustics===k+1?'selected':''}>${a}</option>`).join('')}</select></label>
+        </div>
+        <div class="slots">${slots}</div>
+        <div class="meter"><i id="pen-m-${i}" style="width:${sc.total}%"></i></div>
+      </div></div>`;
+  }).join('');
+}
+function slider(kind,key,val,label,title){
+  return `<label class="sl" for="c-${kind}-${key}" title="${esc(title||'')}"><span>${label}</span><input type="range" min="1" max="100" value="${R(val)}" id="c-${kind}-${key}" data-${kind}="${key}"><output id="o-${kind}-${key}">${R(val)}</output></label>`;
+}
+let releaseArm=false;
+function renderCard(){
+  const el=$('#card'), a=S.animals[S.selected]; releaseArm=false;
+  if(!a){ el.innerHTML=`<p class="card-empty">Select an animal in the barn or in a pen to see its voice, stats and traits.</p>`; return; }
+  const sp=S.species[a.species], loc=locate(a.id), inPen=loc!=='barn'&&loc!==null;
+  el.innerHTML=`
+  <div class="card-top">
+    <div class="card-art r-${a.rarity}">${svgA(a.species)}</div>
+    <div class="card-id">
+      <input id="c-name" class="c-name" value="${esc(a.name)}" maxlength="18" aria-label="Animal name">
+      <p class="c-sub">${sp.name} · ${sp.voice} (${noteName(sp.range[0])}–${noteName(sp.range[1])}) · calls “${sp.call}”</p>
+      <label class="mini" for="c-rarity">Rarity <select id="c-rarity">${S.rarity.map(r=>`<option value="${r.id}" ${r.id===a.rarity?'selected':''}>${r.name}</option>`).join('')}</select></label>
+      <p class="c-sub">Lives in ${inPen?'Pen '+(loc+1)+`, sings ${['first','second','third','fourth','fifth'][S.pens[loc].animals.indexOf(a.id)]}`:'the barn'}.</p>
+    </div>
+  </div>
+  <div class="c-actions">
+    <button class="btn sm primary" data-act="audition">♪ Audition</button>
+    <span class="lbl">Move to</span>
+    ${S.pens.map((p,i)=>`<button class="btn sm" data-act="send" data-dest="${i}" ${loc===i?'disabled':''}>Pen ${i+1}</button>`).join('')}
+    <button class="btn sm" data-act="send" data-dest="barn" ${loc==='barn'?'disabled':''}>Barn</button>
+    <button class="btn sm danger" data-act="release" id="release-btn">Release</button>
+  </div>
+  <div class="c-grid">
+    <fieldset><legend>Singing stats</legend>${STATS.map(k=>slider('st',k,a.stats[k],STAT_LABEL[k],STAT_DESC[k])).join('')}</fieldset>
+    <fieldset><legend>Technique affinity</legend>${TECHS.map(t=>slider('tc',t,a.tech[t],t,TECH_DESC[t])).join('')}</fieldset>
+    <fieldset><legend>Traits</legend>
+      <div class="traits">${Object.entries(TRAITS).map(([k,t])=>`<button class="trait ${has(a,k)?'on':''}" data-act="trait" data-trait="${k}" aria-pressed="${has(a,k)}" title="${esc(t.desc)}">${t.name}</button>`).join('')}</div>
+      <p class="trait-desc">${a.traits.map(k=>`<b>${TRAITS[k].name}:</b> ${TRAITS[k].desc}`).join('<br>')||'No traits. Tap one to try it on this animal.'}</p>
+    </fieldset>
+  </div>
+  <div class="c-q">Voice quality <b id="c-q">${R(quality(a,inPen?S.pens[loc]:null))}</b><span class="small">= pitch 35% + power 20% + timing 25% + harmony 20%</span></div>`;
+}
+function insights(res){
+  const out=[];
+  res.forEach((r,i)=>{
+    if(!r.n){ out.push({c:'tip',t:`Pen ${i+1} is empty and scores 0. Any animal helps.`}); return; }
+    r.pairs.filter(p=>p.v<=-1).forEach(p=>out.push({c:'bad',t:`Pen ${i+1}: ${esc(p.x.name)} and ${esc(p.y.name)} clash (${p.v}).`}));
+    r.pairs.filter(p=>p.v>=2).forEach(p=>out.push({c:'good',t:`Pen ${i+1}: ${esc(p.x.name)} and ${esc(p.y.name)} sing well together (+${p.v}).`}));
+    r.list.filter(a=>fitOf(a,S.pens[i].style)<45).forEach(a=>out.push({c:'bad',t:`${esc(a.name)} is weak at ${S.pens[i].style} (${R(fitOf(a,S.pens[i].style))}). Best: ${TECHS.reduce((b,t)=>a.tech[t]>a.tech[b]?t:b,TECHS[0])}.`}));
+    if(r.n<S.penCap) out.push({c:'tip',t:`Pen ${i+1} has ${S.penCap-r.n} free spot${S.penCap-r.n>1?'s':''}. A full pen removes the fullness penalty (×${r.full.toFixed(2)}).`});
+  });
+  const orc=orchestraScore();
+  orc.missing.forEach(sp=>out.push({c:'tip',t:`Orchestra: no ${S.species[sp].name.toLowerCase()} in any pen, so the ${S.species[sp].voice.toLowerCase()} register is missing from the tutti.`}));
+  orc.dupes.forEach(t=>out.push({c:'bad',t:`Orchestra: more than one pen plays ${t}. Different styles make a richer tutti.`}));
+  const worst=orc.pairs.filter(p=>p.v<=-2)[0]; if(worst) out.push({c:'bad',t:`Orchestra: ${esc(worst.x.name)} (Pen ${worst.pi+1}) and ${esc(worst.y.name)} (Pen ${worst.pj+1}) clash in the tutti (${worst.v}).`});
+  const order={bad:0,good:1,tip:2}; return out.sort((a,b)=>order[a.c]-order[b.c]).slice(0,8);
+}
+function renderScore(){
+  const res=S.pens.map(penScore), orc=orchestraScore(), con=concertScore(res,orc), g=grade(con.total), filled=res.filter(r=>r.n);
+  const avg=k=>filled.length?mean(filled.map(r=>r[k])):0, W=S.weights, ws=(W.quality+W.affinity+W.fit)||1;
+  const mrow=(l,w,v)=>`<div class="mrow"><span>${l}${w?` <span class="w">${w}</span>`:''}</span><div class="meter"><i style="width:${v}%"></i></div><span>${R(v)}</span></div>`;
+  $('#scorechip').innerHTML=`<span class="grade g-${g.l}">${g.l}</span><b>${R(con.total)}</b><span class="small">/100</span>`;
+  const os=$('#orc-sc'); if(os) os.innerHTML=`Orchestra ${R(orc.total)}<small>/100</small>`;
+  $('#score').innerHTML=`
+  <div class="sc-head"><div class="sc-big">${R(con.total)}<small>/100</small></div><div class="grade g-${g.l}" aria-label="Grade ${g.l}">${g.l}</div><p class="sc-msg">${g.msg}</p></div>
+  <p class="concert-line">Concert = solos <b>${R(con.solo)}</b> × ${R((1-con.o)*100)}% + orchestra <b>${R(orc.total)}</b> × ${R(con.o*100)}%</p>
+  <p class="subh">Solos · average of filled pens</p>
+  <div class="meters">${[['Sound quality','q','quality'],['Affinity','a','affinity'],['Pen fit','f','fit']].map(([l,k,w])=>mrow(l,R(W[w]/ws*100)+'%',avg(k))).join('')}</div>
+  <p class="subh">Orchestra · all pens together</p>
+  <div class="meters">${mrow('Registers','species',orc.cov)}${mrow('Style variety','',orc.vari)}${mrow('Cross-pen harmony','',orc.cross)}</div>
+  <p class="small">Orchestra = mean of the three × pens in use (${S.pens.filter(p=>p.animals.length).length}/${S.pens.length}).</p>
+  <div class="tbl-wrap"><table><thead><tr><th>Pen</th><th>Qual.</th><th>Aff.</th><th>Fit</th><th>Acou.</th><th>Full</th><th>Score</th></tr></thead><tbody>
+  ${res.map((r,i)=>`<tr><td>${i+1} · ${S.pens[i].style}</td><td class="n">${r.n?R(r.q):'–'}</td><td class="n">${r.n?R(r.a):'–'}</td><td class="n">${r.n?R(r.f):'–'}</td><td class="n">×${r.ac.toFixed(2)}</td><td class="n">×${r.n?r.full.toFixed(2):'0'}</td><td class="n"><b>${R(r.total)}</b></td></tr>`).join('')}
+  </tbody></table></div>
+  <ul class="notes">${insights(res).map(n=>`<li class="${n.c}">${n.t}</li>`).join('')}</ul>
+  <p class="small">The full formula and its weights are in the Tuning tab.</p>`;
+}
+function updateScores(){
+  S.pens.forEach((p,i)=>{ const sc=penScore(p), e=$('#pen-sc-'+i); if(!e) return; e.innerHTML=`${R(sc.total)}<small>/100</small>`; $('#pen-m-'+i).style.width=sc.total+'%'; $('#staff-'+i).innerHTML=staffSVG(p,i); $('#pen-stl-'+i).title=TECH_DESC[p.style]; });
+  renderOrc(); renderScore();
+  const a=S.animals[S.selected], q=$('#c-q'); if(a&&q){ const l=locate(a.id); q.textContent=R(quality(a,l!=='barn'&&l!==null?S.pens[l]:null)); }
+}
+function renderAll(){ renderBarn(); renderPens(); renderOrc(); renderCard(); renderScore(); }
+
+/* ---------- tuning ---------- */
+function num(id,val,attrs,min=0,max=100,step=1){ return `<input type="number" id="${id}" value="${val}" min="${min}" max="${max}" step="${step}" ${attrs}>`; }
+function tslider(id,label,val,attrs,min,max){ return `<label class="sl" for="${id}"><span>${label}</span><input type="range" id="${id}" min="${min}" max="${max}" value="${val}" ${attrs}><output id="${id}-o">${val}</output></label>`; }
+function speciesTune(){
+  const sp=S.tuneSp, d=S.species[sp];
+  return `<div class="chips">${SPECIES.map(s=>`<button class="chip" data-act="tunesp" data-sp="${s}" aria-pressed="${s===sp}">${svgA(s)}${S.species[s].name}</button>`).join('')}</div>
+  <p class="small">${d.name}: ${d.voice}, ${noteName(d.range[0])}–${noteName(d.range[1])}, calls “${d.call}”.</p>
+  <fieldset><legend>Base singing stats</legend>${STATS.map(k=>tslider(`sp-${sp}-${k}`,STAT_LABEL[k],d.stats[k],`data-sp="${sp}" data-k="${k}"`,1,100)).join('')}</fieldset>
+  <fieldset><legend>Base technique affinity</legend>${TECHS.map(t=>tslider(`tc-${sp}-${t}`,t,d.tech[t],`data-tsp="${sp}" data-t="${t}"`,1,100)).join('')}</fieldset>`;
+}
+function renderTuning(){
+  const spawnTot=S.rarity.reduce((s,r)=>s+r.spawn,0)||1, W=S.weights;
+  $('#tune').innerHTML=`
+  <div class="sec"><h3>Scoring and storage</h3>
+    <div class="cfg">
+      ${[['quality','Sound quality weight'],['affinity','Affinity weight'],['fit','Pen fit weight']].map(([k,l])=>tslider(`w-${k}`,l,W[k],`data-w="${k}"`,0,100)).join('')}
+      ${tslider('w-orchestra','Orchestra share %',W.orchestra,'data-w="orchestra"',0,80)}
+      ${tslider('cfg-penCount','Number of pens',S.penCount,'data-cfg="penCount"',1,5)}
+      ${tslider('cfg-penCap','Animals per pen',S.penCap,'data-cfg="penCap"',1,5)}
+      ${tslider('cfg-barnCap','Barn capacity',S.barnCap,'data-cfg="barnCap"',2,16)}
+    </div></div>
+  <hr class="sep">
+  <div class="sec"><h3>Score formula</h3>
+<pre class="formula">quality  = mean(pitch·.35 + power·.20
+               + timing·.25 + harmony·.20)
+affinity = 50 + 25 · mean(pair values)
+           (one animal alone: 60)
+fit      = mean(technique affinity
+               for the pen style)
+
+pen      = (Wq·quality + Wa·affinity + Wf·fit)
+           / (Wq + Wa + Wf)
+           × acoustics  1.00 / 1.08 / 1.16
+           × fullness   0.7 + 0.3·animals/cap
+solos    = mean(pens), empty pen = 0
+
+registers = species present / 4
+variety   = distinct pen styles
+            / min(pens, 4)
+cross     = 50 + 25 · mean(pair values
+            between animals in different pens)
+orchestra = mean(registers, variety, cross)
+            × pens in use / pens
+
+concert  = solos·(1−Wo) + orchestra·Wo
+grade    S≥85 · A≥72 · B≥58 · C≥42 · D</pre></div>
+  <hr class="sep">
+  <div class="sec"><h3>Species</h3>
+    <p class="small">Base values. New catches roll ±12 around stats and ±10 around affinities, then the rarity multiplier applies. Animals you already own keep their values.</p>
+    <div id="tune-sp" class="sec">${speciesTune()}</div></div>
+  <hr class="sep">
+  <div class="sec"><h3>Rarity</h3>
+    <div class="tbl-wrap"><table><thead><tr><th>Tier</th><th>Spawn</th><th>Odds</th><th>Catch%</th><th>Stat×</th><th>Traits</th></tr></thead><tbody>
+    ${S.rarity.map(r=>`<tr><td class="r-${r.id}"><b>${r.name}</b></td><td>${num(`ra-${r.id}-spawn`,r.spawn,`data-ra="${r.id}" data-f="spawn" aria-label="${r.name} spawn weight"`,0,100)}</td><td class="n" id="odds-${r.id}">${R(r.spawn/spawnTot*100)}%</td><td>${num(`ra-${r.id}-catch`,r.catch,`data-ra="${r.id}" data-f="catch" aria-label="${r.name} catch chance"`,1,100)}</td><td>${num(`ra-${r.id}-mult`,r.mult,`data-ra="${r.id}" data-f="mult" aria-label="${r.name} stat multiplier"`,.5,2,.01)}</td><td>${num(`ra-${r.id}-traits`,r.traits,`data-ra="${r.id}" data-f="traits" aria-label="${r.name} trait count"`,0,3)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="small">Common animals with 0 traits still have a 30% chance to roll one. Rare and Legendary animals get +25 on one weaker technique.</p></div>
+  <hr class="sep">
+  <div class="sec"><h3>Species affinity</h3>
+    <div class="tbl-wrap"><table class="aff"><thead><tr><th></th>${SPECIES.map(s=>`<th>${S.species[s].name}</th>`).join('')}</tr></thead><tbody>
+    ${SPECIES.map(a=>`<tr><th>${S.species[a].name}</th>${SPECIES.map(b=>{const v=S.affinity[a][b]; return `<td><select id="af-${a}-${b}" data-af="${a}" data-bf="${b}" class="v${v}" aria-label="${S.species[a].name} with ${S.species[b].name}">${[2,1,0,-1,-2].map(x=>`<option value="${x}" ${x===v?'selected':''}>${x>0?'+'+x:x}</option>`).join('')}</select></td>`;}).join('')}</tr>`).join('')}
+    </tbody></table></div>
+    <p class="small">Pair value inside a pen, from −2 to +2. The matrix is symmetric, so Cow × Sheep also sets Sheep × Cow. Traits add or remove up to 2 more.</p></div>
+  <hr class="sep">
+  <div class="sec"><h3>Pen styles</h3><dl class="deflist">${TECHS.map(t=>`<div><dt>${t}</dt><dd>${TECH_DESC[t]}</dd></div>`).join('')}</dl></div>
+  <hr class="sep">
+  <div class="sec"><h3>Traits</h3><dl class="deflist">${Object.values(TRAITS).map(t=>`<div><dt>${t.name}</dt><dd>${t.desc}</dd></div>`).join('')}</dl></div>`;
+}
+
+/* ---------- field ---------- */
+let field=[], lastT=0, spawnTimer=0, fieldRaf=0;
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FA_W=76, FA_H=70;
+function rollRarity(){ const tot=S.rarity.reduce((s,r)=>s+Math.max(0,r.spawn),0)||1; let x=Math.random()*tot; for(const r of S.rarity){ x-=Math.max(0,r.spawn); if(x<=0) return r.id; } return S.rarity[0].id; }
+function makeAnimal(sp,rid){
+  const base=S.species[sp], r=rar(rid), stats={}, tech={};
+  STATS.forEach(k=>stats[k]=R(clamp((base.stats[k]+rnd(-12,12))*r.mult,1,100)));
+  TECHS.forEach(t=>tech[t]=R(clamp(base.tech[t]+rnd(-10,10),1,100)));
+  if(rid==='rare'||rid==='legendary'){ const w=TECHS.filter(t=>tech[t]<70); if(w.length){ const t=pick(w); tech[t]=clamp(tech[t]+25,1,100);} }
+  let count=r.traits; if(count===0&&Math.random()<.3) count=1;
+  const traits=[], pool=Object.keys(TRAITS); while(traits.length<Math.min(count,pool.length)){ const t=pick(pool); if(!traits.includes(t)) traits.push(t); }
+  const used=new Set(Object.values(S.animals).map(a=>a.name)); const free=NAMES[sp].filter(n=>!used.has(n));
+  return {id:uid(),species:sp,name:free.length?pick(free):pick(NAMES[sp])+' '+(2+Math.floor(Math.random()*8)),rarity:rid,stats,tech,traits};
+}
+function spawn(){
+  const box=$('#field'); const w=box.clientWidth, h=box.clientHeight;
+  const sp=pick(SPECIES), rid=rollRarity(), r=rar(rid);
+  const el=document.createElement('button'); el.className='fa'; el.type='button';
+  el.innerHTML=svgA(sp)+`<span class="rb r-${rid}">${r.name}</span>`;
+  el.setAttribute('aria-label',`${r.name} ${S.species[sp].name}, ${r.catch}% catch chance. Throw lasso.`);
+  el.title=`${r.name} ${S.species[sp].name} · ${r.catch}% catch chance`;
+  const fa={el,sp,rid,x:rnd(0,Math.max(0,w-FA_W)),y:rnd(8,Math.max(8,h-FA_H)),vx:rnd(-30,30),vy:rnd(-8,8),pause:0,busy:false};
+  el.addEventListener('click',()=>tryCatch(fa));
+  box.appendChild(el); field.push(fa);
+}
+function tryCatch(fa){
+  if(fa.busy) return;
+  if(S.barn.length>=S.barnCap){ toast(`The barn is full (${S.barnCap}/${S.barnCap}). Put animals in pens or release one first.`); return; }
+  fa.busy=true; fa.el.classList.add('try');
+  setTimeout(()=>{
+    const r=rar(fa.rid);
+    if(Math.random()*100<r.catch){
+      const a=makeAnimal(fa.sp,fa.rid); S.animals[a.id]=a; S.barn.push(a.id); S.selected=a.id;
+      toast(`Caught ${a.name}, a ${r.name} ${S.species[fa.sp].name}!`);
+      try{ const ac=audio(); const v=voiceParams(a,1,false); sing(a.species,ac.currentTime+.02,placeMel(PENTA[2],S.species[a.species].range),.5,v.vel,v.cents,.15,master);}catch(e){}
+      setTab('animal'); renderBarn(); renderPens(); renderCard();
+    } else toast(`The ${r.name.toLowerCase()} ${S.species[fa.sp].name.toLowerCase()} slipped the lasso and ran off.`);
+    removeFA(fa);
+  },460);
+}
+function removeFA(fa){ fa.el.classList.add('gone'); field=field.filter(f=>f!==fa); setTimeout(()=>fa.el.remove(),400); }
+function stepField(t){
+  const dt=Math.min(.05,(t-lastT)/1000||0); lastT=t;
+  const box=$('#field'); const w=box.clientWidth, h=box.clientHeight;
+  field.forEach(f=>{
+    if(!f.busy && !reduced){
+      if(f.pause>0) f.pause-=dt;
+      else { f.x+=f.vx*dt; f.y+=f.vy*dt; if(Math.random()<.006){ f.pause=rnd(.6,2.2); f.vx=rnd(-34,34); f.vy=rnd(-10,10);} }
+    }
+    if(f.x<0){f.x=0;f.vx=Math.abs(f.vx);} if(f.x>w-FA_W){f.x=Math.max(0,w-FA_W);f.vx=-Math.abs(f.vx);}
+    if(f.y<6){f.y=6;f.vy=Math.abs(f.vy);} if(f.y>h-FA_H){f.y=Math.max(6,h-FA_H);f.vy=-Math.abs(f.vy);}
+    f.el.style.transform=`translate(${f.x}px,${f.y}px)`;
+    f.el.classList.toggle('flip',f.vx>0);
+  });
+  spawnTimer-=dt; if(spawnTimer<=0){ spawnTimer=3.5; if(field.length<4) spawn(); }
+  fieldRaf=requestAnimationFrame(stepField);
+}
+function startField(){ field.forEach(f=>f.el.remove()); field=[]; for(let k=0;k<4;k++) spawn(); cancelAnimationFrame(fieldRaf); fieldRaf=requestAnimationFrame(stepField); }
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3200); }
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b) return;
+  const act=b.dataset.act, a=S.animals[S.selected];
+  if(act==='select'){ S.selected=b.dataset.id; setTab('animal'); renderBarn(); renderPens(); renderCard(); }
+  else if(act==='tab'){ setTab(b.dataset.tab); }
+  else if(act==='tunesp'){ S.tuneSp=b.dataset.sp; $('#tune-sp').innerHTML=speciesTune(); }
+  else if(act==='place'){ const p=+b.dataset.pen; if(!a){ toast('Select an animal in the barn first.'); return; } if(locate(a.id)===p){ toast(`${a.name} is already in Pen ${p+1}.`); return; } moveTo(a.id,p); }
+  else if(act==='send'&&a){ moveTo(a.id,b.dataset.dest==='barn'?'barn':+b.dataset.dest); }
+  else if(act==='trait'&&a){ const k=b.dataset.trait; a.traits=has(a,k)?a.traits.filter(x=>x!==k):[...a.traits,k]; renderCard(); updateScores(); }
+  else if(act==='audition'&&a){ audition(a); }
+  else if(act==='release'&&a){
+    if(!releaseArm){ releaseArm=true; b.textContent=`Tap again to release ${a.name}`; return; }
+    detach(a.id); delete S.animals[a.id]; toast(`${a.name} went back to the wild.`); S.selected=S.barn[0]||null; if(perf) stop(); renderAll();
+  }
+  else if(act==='play'){ play({type:'concert'}); }
+  else if(act==='tutti'){ play({type:'tutti'}); }
+  else if(act==='listen'){ play({type:'pen',i:+b.dataset.pen}); }
+  else if(act==='whistle'){ field.slice().forEach(removeFA); for(let k=0;k<4;k++) spawn(); }
+  else if(act==='reset'){ if(perf) stop(); const tab=S.tab; S=fresh(); S.tab=tab; renderTuning(); renderAll(); startField(); syncTransport(); setTab(tab); toast('Prototype reset to the example farm.'); }
+});
+function syncTransport(){ $('#cfg-tempo-q').value=S.tempo; $('#tempo-out').textContent=S.tempo; $('#cfg-stomp-q').checked=S.stomp; }
+document.addEventListener('input',e=>{
+  const t=e.target, d=t.dataset, a=S.animals[S.selected];
+  const out=$('#'+t.id+'-o'); if(out) out.textContent=t.value;
+  if(t.id==='c-name'&&a){ a.name=t.value||'Nameless'; $$(`.tok[data-id="${a.id}"] .tok-n`).forEach(n=>n.textContent=a.name); renderScore(); return; }
+  if(d.st&&a){ a.stats[d.st]=+t.value; $('#o-st-'+d.st).textContent=t.value; updateScores(); return; }
+  if(d.tc&&a){ a.tech[d.tc]=+t.value; $('#o-tc-'+d.tc).textContent=t.value; updateScores(); return; }
+  if(d.sp){ S.species[d.sp].stats[d.k]=clamp(+t.value||1,1,100); return; }
+  if(d.tsp){ S.species[d.tsp].tech[d.t]=clamp(+t.value||1,1,100); return; }
+  if(d.ra){ const r=rar(d.ra); r[d.f]=+t.value||0; const tot=S.rarity.reduce((s,x)=>s+x.spawn,0)||1; S.rarity.forEach(x=>{const o=$('#odds-'+x.id); if(o)o.textContent=R(x.spawn/tot*100)+'%';}); return; }
+  if(d.w){ S.weights[d.w]=+t.value; updateScores(); return; }
+  if(d.cfg){
+    const k=d.cfg;
+    if(k==='stomp'){ S.stomp=t.checked; return; }
+    const v=+t.value; S[k]=v;
+    if(k==='tempo'){ $('#tempo-out').textContent=v; return; }
+    if(perf) stop();
+    if(k==='penCount'){
+      while(S.pens.length<v) S.pens.push({style:TECHS[S.pens.length%4],acoustics:1,animals:[]});
+      while(S.pens.length>v){ const p=S.pens.pop(); S.barn.push(...p.animals); }
+    }
+    if(k==='penCap'){ S.pens.forEach(p=>{ while(p.animals.length>v) S.barn.push(p.animals.pop()); }); }
+    if(S.barn.length>S.barnCap) toast(`The barn holds ${S.barn.length} animals, over its capacity of ${S.barnCap}. New catches are blocked until there is room.`);
+    renderAll();
+  }
+});
+document.addEventListener('change',e=>{
+  const t=e.target, d=t.dataset, a=S.animals[S.selected];
+  if(d.penStyle!==undefined){ S.pens[+d.penStyle].style=t.value; updateScores(); }
+  else if(d.penAc!==undefined){ S.pens[+d.penAc].acoustics=+t.value; updateScores(); }
+  else if(t.id==='c-rarity'&&a){ a.rarity=t.value; renderBarn(); renderPens(); renderCard(); updateScores(); }
+  else if(d.af){ const v=+t.value; S.affinity[d.af][d.bf]=v; S.affinity[d.bf][d.af]=v; [t,$(`#af-${d.bf}-${d.af}`)].forEach(s=>{ if(s){ s.value=v; s.className='v'+v; } }); updateScores(); }
+});
+/* drag and drop */
+document.addEventListener('dragstart',e=>{ const tok=e.target.closest&&e.target.closest('.tok'); if(!tok) return; e.dataTransfer.setData('text/plain',tok.dataset.id); e.dataTransfer.effectAllowed='move'; });
+document.addEventListener('dragover',e=>{ const z=e.target.closest&&e.target.closest('[data-drop]'); if(!z) return; e.preventDefault(); $$('.over').forEach(x=>x!==z&&x.classList.remove('over')); z.classList.add('over'); });
+document.addEventListener('dragleave',e=>{ const z=e.target.closest&&e.target.closest('[data-drop]'); if(z&&!z.contains(e.relatedTarget)) z.classList.remove('over'); });
+document.addEventListener('drop',e=>{ const z=e.target.closest&&e.target.closest('[data-drop]'); $$('.over').forEach(x=>x.classList.remove('over')); if(!z) return; e.preventDefault(); const id=e.dataTransfer.getData('text/plain'); if(!S.animals[id]) return; S.selected=id; const dest=z.dataset.drop==='barn'?'barn':+z.dataset.drop; if(!moveTo(id,dest)){ renderBarn(); renderPens(); renderCard(); } });
+
+/* ---------- boot ---------- */
+function start(data){
+  S=(data&&data.S)?data.S:fresh();
+  if(!S.tab) S.tab='animal'; if(!S.tuneSp) S.tuneSp='cow'; if(S.weights.orchestra==null) S.weights.orchestra=30;
+  renderTuning(); renderAll(); syncTransport(); setTab(S.tab); startField();
+}
+const hot=window.claude&&window.claude.hot;
+if(hot&&hot.snapshot) hot.snapshot(()=>({S}));
+if(hot&&hot.ready) hot.ready(start); else start((hot&&hot.data)||{});
+})();
+</script>
